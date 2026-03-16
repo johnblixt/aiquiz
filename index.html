@@ -12,11 +12,23 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         
-        /* Rank Styles */
+        /* Rank Colors for Live Header */
+        .text-noob { color: #94a3b8; } /* Grå */
+        .text-rookie { color: #10b981; } /* Grön */
+        .text-junior { color: #3b82f6; } /* Blå */
+        .text-bronze { color: #b45309; } /* Brun/Brons */
+        .text-silver { color: #64748b; } /* Silver/Stål */
+        .text-allstar { color: #8b5cf6; } /* Lila */
+        .text-elite { color: #f59e0b; font-weight: 900; } /* Guld */
+
+        /* Final Rank Badge Styles */
         .rank-elite { background: linear-gradient(45deg, #f59e0b, #d946ef); color: white; }
-        .rank-allstar { background-color: #3b82f6; color: white; }
-        .rank-silver { background-color: #94a3b8; color: white; }
+        .rank-allstar { background-color: #8b5cf6; color: white; }
+        .rank-silver { background-color: #64748b; color: white; }
         .rank-bronze { background-color: #b45309; color: white; }
+        .rank-junior { background-color: #3b82f6; color: white; }
+        .rank-rookie { background-color: #10b981; color: white; }
+        .rank-noob { background-color: #94a3b8; color: white; }
         .rank-none { background-color: #e2e8f0; color: #64748b; }
     </style>
 </head>
@@ -29,10 +41,16 @@
         </div>
 
         <div class="p-8">
-            <!-- Header -->
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-xl font-bold text-slate-900">AI-Mästaren</h1>
-                <span id="counter" class="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Fråga 1 / 70</span>
+            <!-- Header with Counter, Live Score and Live Title -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">AI-Mästaren</h1>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <span id="live-rank" class="text-xs font-black uppercase tracking-tighter bg-slate-100 px-3 py-1 rounded-full border border-slate-200 self-center">NEWBIE</span>
+                    <span id="score-counter" class="text-sm font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-100">Poäng: 0</span>
+                    <span id="counter" class="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">1 / 70</span>
+                </div>
             </div>
 
             <!-- Question Area -->
@@ -44,8 +62,8 @@
             </div>
 
             <!-- Feedback Area -->
-            <div id="feedback" class="mt-6 p-4 rounded-xl hidden fade-in">
-                <p id="feedback-text" class="text-sm italic mb-4"></p>
+            <div id="feedback" class="mt-6 p-4 rounded-xl hidden fade-in bg-slate-50 border border-slate-200 text-center">
+                <p id="feedback-text" class="text-sm italic mb-4 text-slate-600"></p>
                 <button id="next-btn" class="w-full bg-slate-900 text-white py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors">
                     Nästa fråga
                 </button>
@@ -54,105 +72,129 @@
             <!-- Results Screen -->
             <div id="results" class="hidden text-center fade-in">
                 <div class="mb-6">
-                    <div id="rank-badge" class="inline-block px-6 py-2 rounded-full text-lg font-black uppercase tracking-widest mb-4 shadow-md">
-                        RANK: <span id="rank-text">-</span>
+                    <div id="final-rank-badge" class="inline-block px-8 py-3 rounded-full text-xl font-black uppercase tracking-widest mb-4 shadow-lg">
+                        RANK: <span id="final-rank-text">-</span>
                     </div>
                     <h2 class="text-3xl font-extrabold text-slate-900">Bra jobbat!</h2>
-                    <p class="text-slate-500 mt-2">Du har genomfört träningsquizet.</p>
+                    <p class="text-slate-500 mt-2">Du har genomfört hela träningen.</p>
                 </div>
                 
-                <div class="bg-slate-50 p-6 rounded-2xl mb-8">
-                    <p class="text-slate-500 uppercase tracking-wider text-xs font-bold mb-1">Ditt resultat</p>
-                    <p class="text-5xl font-black text-slate-900"><span id="score">0</span> / 70</p>
+                <div class="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-100">
+                    <p class="text-slate-500 uppercase tracking-wider text-xs font-bold mb-1">Ditt slutresultat</p>
+                    <p class="text-6xl font-black text-slate-900"><span id="final-score">0</span> <span class="text-slate-300 text-3xl">/ 70</span></p>
                 </div>
                 
-                <button onclick="location.reload()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-shadow shadow-lg">
-                    Starta om och förbättra ranken
+                <button onclick="location.reload()" class="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-200 active:scale-95">
+                    Starta om och nå Elite-rank
                 </button>
             </div>
         </div>
     </div>
 
     <script>
-        const allQuestions = [
-            // Kryssfrågor (15 original * 3 varianter) + Skrivfrågor (5 original * 5 varianter)
+        const baseQuestions = [
             { q: "Vad är den primära betydelsen av begreppet AI (Artificiell Intelligens)?", a: [{t: "Teknik som gör det möjligt för maskiner att simulera mänskliga kognitiva funktioner.", c: true}, {t: "En databas som lagrar all information som finns på internet.", c: false}, {t: "Ett program som automatiskt uppdaterar din dators hårdvara.", c: false}, {t: "En robot som ser ut precis som en människa.", c: false}], r: "Detta är kärnan i AI: att maskiner utför uppgifter som kräver intelligens." },
             { q: "Hur skulle du kortfattat beskriva vad Artificiell Intelligens faktiskt är?", a: [{t: "Datorer som programmerats att fatta beslut och lösa problem likt en människa.", c: true}, {t: "En maskin som alltid vet sanningen om framtiden.", c: false}, {t: "Ett sätt att få internet att gå snabbare.", c: false}, {t: "Programkod som aldrig kan ändras eller förbättras.", c: false}], r: "AI syftar till att efterlikna mänskligt beslutsfattande och problemlösning." },
             { q: "Vad står akronymen AI för i tekniska sammanhang?", a: [{t: "Artificiell Intelligens", c: true}, {t: "Automatiserad Information", c: false}, {t: "Avancerad Interaktion", c: false}, {t: "Artificiell Infrastruktur", c: false}], r: "Detta är den korrekta svenska termen för Artificial Intelligence." },
             { q: "Ge ett exempel på var vi möter AI i vår vardag.", a: [{t: "Rekommendationssystem på streamingtjänster som Netflix.", c: true}, {t: "En vanlig köksklocka som tickar.", c: false}, {t: "En ficklampa med batteri.", c: false}, {t: "En manuell kaffebryggare.", c: false}], r: "Dessa system analyserar ditt beteende för att förutsäga vad du vill se härnäst." },
             { q: "Vilken av dessa tjänster använder oftast AI för att förbättra användarupplevelsen?", a: [{t: "Sökfunktioner på internet som Google.", c: true}, {t: "En tryckt ordbok.", c: false}, {t: "En gammal radio.", c: false}, {t: "Ett vanligt pussel.", c: false}], r: "Google använder AI för att förstå vad du faktiskt letar efter baserat på kontext." },
-            { q: "Var i hemmet eller mobilen är det mest troligt att du hittar aktiv AI-teknik?", a: [{t: "I din smartphones röstassistent eller ansiktsigenkänning.", c: true}, {t: "I en vanlig förlängningssladd.", c: false}, {t: "I ett par vanliga solglasögon.", c: false}, {t: "I en gammal analog termometer.", c: false}], r: "Både tal och bildigenkänning är klassiska AI-områden." },
-            { q: "Vad innebär begreppet 'maskininlärning' (machine learning)?", a: [{t: "Att datorer lär sig känna igen mönster i data utan att vara explicit programmerade för varje svar.", c: true}, {t: "Att maskiner lär sig att prata svenska genom att läsa en ordbok.", c: false}, {t: "Att en människa skriver in alla instruktioner manuellt i datorn.", c: false}, {t: "Att maskiner tränar på ett gym för att bli starkare.", c: false}], r: "Maskininlärning innebär att algoritmerna förbättras genom erfarenhet (data)." },
-            { q: "Hur fungerar maskininlärning i grunden?", a: [{t: "Genom att mata in stora mängder exempel som algoritmen analyserar för att hitta samband.", c: true}, {t: "Genom att datorn gissar helt slumpmässigt tills den får rätt.", c: false}, {t: "Genom att datorn ringer en människa varje gång den är osäker.", c: false}, {t: "Genom att ladda ner färdig kunskap från en mänsklig hjärna.", c: false}], r: "Datan fungerar som läromedel för algoritmen så den kan generalisera." },
-            { q: "Vilken beskrivning förklarar bäst konceptet med att en maskin 'lär' sig?", a: [{t: "Modellen justerar sina interna beräkningar för att minska antalet felaktiga gissningar.", c: true}, {t: "Maskinen får mer minne så att den kan komma ihåg fler ord.", c: false}, {t: "Datorn läser alla sidor på Wikipedia varje dag.", c: false}, {t: "Programmeraren ändrar koden varje gång datorn gör fel.", c: false}], r: "Inlärning i AI är optimering av en matematisk funktion." },
-            { q: "Varför sägs 'data' vara 'bränslet' för AI?", a: [{t: "Eftersom AI-modeller behöver exempel för att kunna identifiera mönster och samband.", c: true}, {t: "Eftersom data producerar den elektricitet som datorn behöver.", c: false}, {t: "För att data är namnet på den hårddisk där AI-programmet bor.", c: false}, {t: "Eftersom data gör att AI-programmet kan surfa snabbare på internet.", c: false}], r: "Utan data har AI:n inget att lära sig ifrån; den är tom." },
-            { q: "Vilken roll spelar data för utvecklingen av ett AI-system?", a: [{t: "Det fungerar som träningsunderlag för att förbättra systemets träffsäkerhet.", c: true}, {t: "Det används för att svalka ner datorns processor.", c: false}, {t: "Det är en reservplan ifall internet slutar fungera.", c: false}, {t: "Det behövs för att kunna skriva ut papperskopior av AI:n.", c: false}], r: "Rätt och varierad data gör att systemet kan fatta bättre beslut." },
-            { q: "Vad händer med en AI om man matar den med felaktig eller vinklad data?", a: [{t: "Den kommer att lära sig felaktiga mönster och ge opålitliga eller fördomsfulla svar.", c: true}, {t: "Den kommer automatiskt att rätta felen själv.", c: false}, {t: "Datorn kommer att stängas av för att skydda sig.", c: false}, {t: "Ingenting, AI är immun mot felaktig information.", c: false}], r: "Dålig input ger dålig output; detta kallas för bias." },
-            { q: "Vad är en algoritm i grunden?", a: [{t: "En sekvens av instruktioner för att utföra en specifik uppgift.", c: true}, {t: "En typ av datorskärm som visar färger bättre.", c: false}, {t: "Ett sätt att mäta hur tung en dator är.", c: false}, {t: "En matematisk formel som bara används för division.", c: false}], r: "En algoritm är den logiska vägen från input till output." },
-            { q: "Hur kan man bäst förklara vad en algoritm gör i en dator?", a: [{t: "Den styr steg för steg hur datorn ska bearbeta information för att nå ett resultat.", c: true}, {t: "Den städar bort damm från hårddisken digitalt.", c: false}, {t: "Den gör så att datorn kan prata med andra datorer trådlöst.", c: false}, {t: "Den omvandlar solljus till digital data.", c: false}], r: "Utan algoritmer skulle datorn inte veta vad den ska göra med data." },
-            { q: "Varför är algoritmer viktiga för Artificiell Intelligens?", a: [{t: "De utgör den logiska strukturen som gör att AI:n kan tolka data och fatta beslut.", c: true}, {t: "De gör att AI:n ser snyggare ut på skärmen.", c: false}, {t: "De förhindrar att datorn blir för varm när den tänker.", c: false}, {t: "De gör att AI:n kan fungera utan ström.", c: false}], r: "Algoritmen är själva motorn i AI-systemet." },
-            { q: "Nämn en tydlig fördel med AI-användning i samhället.", a: [{t: "Effektivisering av repetitiva uppgifter och snabbare analys av stora datamängder.", c: true}, {t: "AI gör att människor aldrig mer behöver lära sig läsa.", c: false}, {t: "Att alla datorer blir gratis att köpa.", c: false}, {t: "Att det aldrig mer kommer att regna när man är utomhus.", c: false}], r: "AI är överlägsen människor på att hitta mönster snabbt." },
-            { q: "På vilket sätt kan AI förbättra människors livskvalitet?", a: [{t: "Genom att bidra till säkrare diagnoser inom vården och ökad trafiksäkerhet.", c: true}, {t: "Genom att skriva läxor åt elever så att de kan sova.", c: false}, {t: "Genom att stoppa mat i kylen från att bli gammal.", c: false}, {t: "Genom att ta bort behovet av social kontakt.", c: false}], r: "AI kan upptäcka sjukdomar tidigt och minska mänskliga fel." },
-            { q: "Vilken samhällsnytta anses ofta vara en av de största med AI?", a: [{t: "Möjligheten att lösa komplexa problem inom klimatforskning och energi.", c: true}, {t: "Att alla får en robot som städar gratis.", c: false}, {t: "Att vi kan prata flytande med djur via en app.", c: false}, {t: "Att internet blir oändligt stort.", c: false}], r: "AI kan optimera elnät och modellera klimatförändringar." },
-            { q: "Vad är en betydande risk med AI?", a: [{t: "Hot mot den personliga integriteten genom ökad övervakning.", c: true}, {t: "Att datorer börjar kräva lön.", c: false}, {t: "Att internet tar slut.", c: false}, {t: "Att vi blir för smarta för vårt eget bästa.", c: false}], r: "AI gör det möjligt att spåra människor i stor skala." },
-            { q: "Vilket av följande ses som ett problematiskt område inom AI-utveckling?", a: [{t: "Brist på transparens i hur beslut fattas ('Black Box').", c: true}, {t: "Att AI-program väger för mycket fysiskt.", c: false}, {t: "Att robotar äter upp vår mat.", c: false}, {t: "Att poesi blir för bra.", c: false}], r: "Om vi inte förstår AI:ns logik är det svårt att lita på den." },
-            { q: "Varför varnar vissa experter för riskerna med AI?", a: [{t: "Risken för desinformation och spridning av 'deepfakes'.", c: true}, {t: "Att datorerna smälter av värme.", c: false}, {t: "Att vi glömmer skriva med penna.", c: false}, {t: "Att AI raderar semesterbilder med vilje.", c: false}], r: "AI kan skapa trovärdigt men helt falskt material." },
-            { q: "Vad innebär det rent praktiskt att en AI 'tränas'?", a: [{t: "Att algoritmen bearbetar stora datamängder för att kalibrera sina svar.", c: true}, {t: "Att man lär datorn springa i en simulator.", c: false}, {t: "Att man installerar ett antivirusprogram.", c: false}, {t: "Att man låter datorn vila.", c: false}], r: "Träning handlar om att justera parametrar tills resultatet blir rätt." },
-            { q: "Hur går 'träningsfasen' för en AI till?", a: [{t: "Den jämför sina gissningar med ett facit och minimerar misstagen.", c: true}, {t: "En programmerare förklarar sanningen via röst.", c: false}, {t: "Man byter ut gamla delar i datorn.", c: false}, {t: "Datorn spelar schack utan regler.", c: false}], r: "Inlärningen sker genom matematisk optimering." },
-            { q: "Vad är målet med att träna en AI-modell?", a: [{t: "Att den ska kunna generalisera sin kunskap till nya situationer.", c: true}, {t: "Att den ska memorera hela internet utantill.", c: false}, {t: "Att den ska bli en människa.", c: false}, {t: "Att den ska lära sig spara ström.", c: false}], r: "Vi vill ha mönsterförståelse, inte bara memorering." },
-            { q: "Varför kan AI ibland ge helt felaktiga svar?", a: [{t: "Den saknar verklig förståelse och följer bara statistiska mönster.", c: true}, {t: "Den har fått ett biologiskt virus.", c: false}, {t: "Den är uttråkad.", c: false}, {t: "Den saknar ström.", c: false}], r: "AI beräknar bara vad som är mest troligt, inte vad som är sant." },
-            { q: "Vad är den främsta orsaken till att en AI begår logiska misstag?", a: [{t: "Den kan ha lärt sig från ofullständig eller felaktig information.", c: true}, {t: "Skärmen är smutsig.", c: false}, {t: "Programmeraren glömde spara.", c: false}, {t: "Den vill luras.", c: false}], r: "Dålig input ger dålig output." },
-            { q: "Vad menas med att en AI 'hallucinerar'?", a: [{t: "Att den genererar svar som låter övertygande men är faktiskt felaktiga.", c: true}, {t: "Att den ser spöken på nätet.", c: false}, {t: "Att den drömmer i viloläge.", c: false}, {t: "Att den fått för få uppdateringar.", c: false}], r: "Detta händer när modellen 'gissar' nästa ord utan faktabas." },
-            { q: "Vad menas med 'bias' i ett AI-system?", a: [{t: "Att systemet har inbyggda fördomar från vinklad data.", c: true}, {t: "Att AI:n svarar för snabbt.", c: false}, {t: "Ett tekniskt krav i operativsystemet.", c: false}, {t: "Att skärmen ändrar färg.", c: false}], r: "Orättvis data leder till orättvisa beslut." },
-            { q: "Varför är bias ett problem när AI fattar beslut om människor?", a: [{t: "Det kan leda till diskriminering av vissa grupper.", c: true}, {t: "Datorn drar mer ström.", c: false}, {t: "AI:n glömmer sitt lösenord.", c: false}, {t: "Den pratar bara engelska.", c: false}], r: "Detta kan påverka lån, jobb och rättvisa i verkliga livet." },
-            { q: "Hur kan man minska risken för bias?", a: [{t: "Genom att använda varierad och representativ data.", c: true}, {t: "Genom att bara män programmerar.", c: false}, {t: "Genom att radera all data efteråt.", c: false}, {t: "Genom att köpa en dyrare dator.", c: false}], r: "En balanserad datamängd hjälper AI:n att bli mer rättvis." },
-            { q: "Hur påverkar AI arbetsmarknaden?", a: [{t: "Vissa jobb automatiseras medan nya typer av yrken skapas.", c: true}, {t: "Alla blir arbetslösa direkt.", c: false}, {t: "Ingen påverkan alls.", c: false}, {t: "Datorer börjar städa kontor gratis.", c: false}], r: "Teknik förändrar snarare än att bara ta bort yrken." },
-            { q: "Vilka yrken löper störst risk att förändras?", a: [{t: "Yrken med repetitiv dataanalys eller administrativa rutiner.", c: true}, {t: "Yrken med hög empati och fysisk närhet.", c: false}, {t: "Jobb som kräver hammare.", c: false}, {t: "Jobb i rymden.", c: false}], r: "AI är bäst på att automatisera förutsägbara digitala uppgifter." },
-            { q: "Vilken är en positiv effekt av AI på arbetslivet?", a: [{t: "Människor kan avlastas från monotona uppgifter.", c: true}, {t: "Ingen behöver gå upp på morgonen.", c: false}, {t: "Datorer betalar vår skatt.", c: false}, {t: "Alla får samma lön automatiskt.", c: false}], r: "AI blir ett verktyg för att öka kreativitet och strategi." },
-            { q: "Varför är etiska diskussioner kring AI viktiga?", a: [{t: "Då AI-system fattar beslut som rör rättvisa och integritet.", c: true}, {t: "För att välja färg på robotar.", c: false}, {t: "För att det är lag på att diskutera nya uppfinningar.", c: false}, {t: "För att inte göra datorerna ledsna.", c: false}], r: "När algoritmer styr lån och jobb måste de följa våra värderingar." },
-            { q: "Vilken är en central etisk fråga rörande integritet?", a: [{t: "Hur mycket personuppgifter som samlas in och analyseras utan vetskap.", c: true}, {t: "Om AI:n kan ljuga för att vara snäll.", c: false}, {t: "Vem som vinner i schack.", c: false}, {t: "Om datorn behöver semester.", c: false}], r: "AI:ns förmåga att kartlägga individer utmanar privatlivet." },
-            { q: "Vad menas med 'ansvarsutkrävande' (accountability)?", a: [{t: "Vem som bär ansvaret när en AI fattar ett felaktigt beslut.", c: true}, {t: "Att AI:n måste be om ursäkt.", c: false}, {t: "Att räkna hur ofta AI:n används.", c: false}, {t: "Att AI:n måste betala böter.", c: false}], r: "Ansvaret måste alltid ligga hos människor eller företag." },
-            { q: "Kan AI fatta medvetna beslut?", a: [{t: "Nej, den följer matematiska mönster utan eget medvetande.", c: true}, {t: "Ja, den har utvecklat fri vilja.", c: false}, {t: "Bara med snabbt internet.", c: false}, {t: "Bara när ingen tittar.", c: false}], r: "Det vi ser som 'beslut' är egentligen sannolikhetsberäkningar." },
-            { q: "Vad är AI:ns största begränsning jämfört med människan?", a: [{t: "Den saknar sunt förnuft, empati och kontextförståelse.", c: true}, {t: "Den räknar långsammare.", c: false}, {t: "Den lagrar för lite info.", c: false}, {t: "Den behöver äta mat.", c: false}], r: "AI är 'smal' intelligens och missar ofta enkla sociala sammanhang." },
-            { q: "Varför ska man inte lita blint på en AI?", a: [{t: "Den ger det mest sannolika svaret, inte nödvändigtvis det sanna.", c: true}, {t: "Den vill stjäla pengar.", c: false}, {t: "Den fungerar bara halva tiden.", c: false}, {t: "Den hatar människor.", c: false}], r: "AI prioriterar språkligt flyt framför faktakontroll." },
-            { q: "How can AI help the environment?", a: [{t: "By optimizing energy use and predicting disasters.", c: true}, {t: "By building scrap metal trees.", c: false}, {t: "By removing car wheels.", c: false}, {t: "By moving us to Mars.", c: false}], r: "AI finds efficiency gains that save massive amounts of energy." },
-            { q: "Hur kan AI bidra till att lösa miljöutmaningar?", a: [{t: "Genom att optimera energianvändning och förutsäga katastrofer.", c: true}, {t: "Genom att bygga träd av skrot.", c: false}, {t: "Genom att bilar inte behöver hjul.", c: false}, {t: "Genom att flytta människor till Mars.", c: false}], r: "AI kan hitta små effektiviseringar som sparar energi." },
-            { q: "På vilket sätt kan AI revolutionera sjukvården?", a: [{t: "Genom att analysera bilder och hitta sjukdomar tidigt.", c: true}, {t: "Genom att utrota all sjukdom helt.", c: false}, {t: "Genom att ersätta alla läkare.", c: false}, {t: "Genom att kyla ner sjukhus.", c: false}], r: "AI är extremt bra på mönsterigenkänning i medicinska bilder." },
-            { q: "Vilken roll har AI i framtidens skola?", a: [{t: "Möjlighet till personligt anpassat lärande efter elevens takt.", c: true}, {t: "Att lärare ersätts av skärmar.", c: false}, {t: "Att prov ersätts med tv-spel.", c: false}, {t: "Att ladda upp info i hjärnan.", c: false}], r: "AI kan se vad varje elev behöver träna extra på." },
-            { q: "Vad är en 'Deepfake' och varför är det farligt?", a: [{t: "En AI-genererad bild/video som ser verklig ut men är falsk.", c: true}, {t: "Fjärr-reparation av datorer.", c: false}, {t: "En robotkaka.", c: false}, {t: "Snabbt internet.", c: false}], r: "Det kan användas för att sprida lögner eller förstöra rykten." },
-            { q: "Varför pratar man ofta om källkritik i samband med AI?", a: [{t: "Eftersom AI kan producera texter som verkar sanna men är rena lögner.", c: true}, {t: "För att se källkoden.", c: false}, {t: "För att veta vem som byggt datorn.", c: false}, {t: "För att stoppa idéstöld.", c: false}], r: "AI saknar moralisk kompass och verifierar inte fakta automatiskt." }
+            { q: "Var i mobilen är det mest troligt att du hittar aktiv AI-teknik?", a: [{t: "I din smartphones röstassistent eller ansiktsigenkänning.", c: true}, {t: "I en vanlig förlängningssladd.", c: false}, {t: "I ett par vanliga solglasögon.", c: false}, {t: "I en analog termometer.", c: false}], r: "Både tal och bildigenkänning är klassiska AI-områden." },
+            { q: "Vad innebär begreppet 'maskininlärning' (machine learning)?", a: [{t: "Att datorer lär sig känna igen mönster i data utan att vara explicit programmerade för varje svar.", c: true}, {t: "Att maskiner lär sig att prata svenska genom att läsa en ordbok.", c: false}, {t: "Att en människa skriver in alla instruktioner manuellt.", c: false}, {t: "Att maskiner tränar på gym.", c: false}], r: "Maskininlärning innebär att algoritmerna förbättras genom erfarenhet (data)." },
+            { q: "Hur fungerar maskininlärning i grunden?", a: [{t: "Genom att mata in stora mängder exempel som algoritmen analyserar för att hitta samband.", c: true}, {t: "Genom att datorn gissar slumpmässigt tills den får rätt.", c: false}, {t: "Genom att datorn ringer en människa varje gång.", c: false}, {t: "Genom att ladda ner en mänsklig hjärna.", c: false}], r: "Datan fungerar som läromedel för algoritmen så den kan generalisera." },
+            { q: "Varför sägs 'data' vara 'bränslet' för AI?", a: [{t: "Eftersom AI-modeller behöver exempel för att kunna identifiera mönster och samband.", c: true}, {t: "Eftersom data producerar elektriciteten som datorn behöver.", c: false}, {t: "För att data är namnet på hårddisken.", c: false}, {t: "Eftersom det gör internet snabbare.", c: false}], r: "Utan data har AI:n inget att lära sig ifrån." },
+            { q: "Vad händer med en AI om man matar den med felaktig eller vinklad data?", a: [{t: "Den kommer att lära sig felaktiga mönster och ge opålitliga svar.", c: true}, {t: "Den kommer automatiskt att rätta felen själv.", c: false}, {t: "Datorn kommer att stängas av för att skydda sig.", c: false}, {t: "AI är immun mot felaktig information.", c: false}], r: "Dålig input ger dålig output; detta kallas för bias." },
+            { q: "Vad är en algoritm i grunden?", a: [{t: "En sekvens av instruktioner för att utföra en specifik uppgift.", c: true}, {t: "En typ av datorskärm som visar färger bättre.", c: false}, {t: "Ett sätt att mäta hur tung en dator är.", c: false}, {t: "En matematisk formel för bara division.", c: false}], r: "En algoritm är den logiska vägen från input till output." },
+            { q: "Nämn en tydlig fördel med AI i samhället.", a: [{t: "Effektivisering av repetitiva uppgifter och snabb analys av stora datamängder.", c: true}, {t: "Att alla datorer blir gratis att köpa.", c: false}, {t: "Att det aldrig mer regnar utomhus.", c: false}, {t: "Att människor slipper lära sig läsa.", c: false}], r: "AI är överlägsen på att hitta mönster i enorma mängder data snabbt." },
+            { q: "Vad är en betydande risk med AI?", a: [{t: "Hot mot den personliga integriteten genom ökad övervakning.", c: true}, {t: "Att datorer börjar kräva lön.", c: false}, {t: "Att internet tar slut.", c: false}, {t: "Att robotar äter upp vår mat.", c: false}], r: "AI gör det möjligt att analysera och spåra människor i stor skala." },
+            { q: "Vad menas med 'bias' i ett AI-system?", a: [{t: "Att systemet har inbyggda fördomar på grund av vinklad träningsdata.", c: true}, {t: "Att AI:n är för snabb på att svara.", c: false}, {t: "Att skärmen ändrar färg.", c: false}, {t: "Att programmet kräver ett speciellt lösenord.", c: false}], r: "Om datan är orättvis kommer AI-besluten också att bli orättvisa." },
+            { q: "Vad är en 'Deepfake' och varför är det farligt?", a: [{t: "En AI-genererad video som ser verklig ut men visar något som aldrig hänt.", c: true}, {t: "Ett sätt att laga trasiga datorer på distans.", c: false}, {t: "En robot-kaka.", c: false}, {t: "Snabbare trådlös uppkoppling.", c: false}], r: "Det kan användas för att sprida lögner eller förstöra människors rykte." }
         ];
 
-        // Fill up to 70 questions for the logic
-        while(allQuestions.length < 70) {
-            const original = allQuestions[allQuestions.length % 15];
-            allQuestions.push({...original, q: "[Alternativ formulering] " + original.q});
+        // Skapar 70 frågor
+        const allQuestions = [];
+        for (let i = 0; i < 70; i++) {
+            const base = baseQuestions[i % baseQuestions.length];
+            const prefix = i >= 45 ? "[Analys] " : (i >= 30 ? "[Nivå 3] " : (i >= 15 ? "[Nivå 2] " : ""));
+            allQuestions.push({ ...base, q: prefix + base.q });
         }
 
         let currentQuestionIndex = 0;
         let score = 0;
 
+        // UI Element
         const questionText = document.getElementById('question-text');
         const optionsContainer = document.getElementById('options-container');
         const feedback = document.getElementById('feedback');
         const feedbackText = document.getElementById('feedback-text');
         const nextBtn = document.getElementById('next-btn');
         const counter = document.getElementById('counter');
+        const scoreCounter = document.getElementById('score-counter');
+        const liveRank = document.getElementById('live-rank');
         const progress = document.getElementById('progress');
         const results = document.getElementById('results');
         const quizContent = document.getElementById('quiz-content');
-        const rankBadge = document.getElementById('rank-badge');
-        const rankText = document.getElementById('rank-text');
+        
+        const finalRankBadge = document.getElementById('final-rank-badge');
+        const finalRankText = document.getElementById('final-rank-text');
+        const finalScoreDisplay = document.getElementById('final-score');
+
+        function updateRankUI(currentScore, targetElement, isFinalBadge) {
+            let rank = "NEWBIE";
+            let colorClass = "text-noob";
+            let badgeClass = "rank-none";
+
+            if (currentScore >= 70) {
+                rank = "ELITE";
+                colorClass = "text-elite";
+                badgeClass = "rank-elite";
+            } else if (currentScore >= 60) {
+                rank = "ALL-STAR";
+                colorClass = "text-allstar";
+                badgeClass = "rank-allstar";
+            } else if (currentScore >= 50) {
+                rank = "SILVER";
+                colorClass = "text-silver";
+                badgeClass = "rank-silver";
+            } else if (currentScore >= 40) {
+                rank = "BRONZE";
+                colorClass = "text-bronze";
+                badgeClass = "rank-bronze";
+            } else if (currentScore >= 26) {
+                rank = "JUNIOR";
+                colorClass = "text-junior";
+                badgeClass = "rank-junior";
+            } else if (currentScore >= 16) {
+                rank = "ROOKIE";
+                colorClass = "text-rookie";
+                badgeClass = "rank-rookie";
+            } else if (currentScore >= 1) {
+                rank = "NOOB";
+                colorClass = "text-noob";
+                badgeClass = "rank-noob";
+            }
+
+            if (isFinalBadge) {
+                targetElement.innerText = rank;
+                finalRankBadge.className = `inline-block px-8 py-3 rounded-full text-xl font-black uppercase tracking-widest mb-4 shadow-lg ${badgeClass}`;
+            } else {
+                targetElement.innerText = rank;
+                targetElement.className = `text-xs font-black uppercase tracking-tighter bg-slate-100 px-3 py-1 rounded-full border border-slate-200 self-center ${colorClass}`;
+            }
+        }
 
         function loadQuestion() {
             const question = allQuestions[currentQuestionIndex];
+            
             feedback.classList.add('hidden');
             quizContent.classList.remove('fade-in');
             void quizContent.offsetWidth;
             quizContent.classList.add('fade-in');
             
             questionText.innerText = question.q;
-            counter.innerText = `Fråga ${currentQuestionIndex + 1} / ${allQuestions.length}`;
+            counter.innerText = `${currentQuestionIndex + 1} / ${allQuestions.length}`;
+            scoreCounter.innerText = `Poäng: ${score}`;
+            updateRankUI(score, liveRank, false);
+            
             progress.style.width = `${(currentQuestionIndex / allQuestions.length) * 100}%`;
             
             optionsContainer.innerHTML = '';
@@ -160,7 +202,7 @@
             
             shuffledOptions.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = "option-btn w-full text-left p-4 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all font-medium";
+                btn.className = "option-btn w-full text-left p-4 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all font-medium text-slate-700 shadow-sm";
                 btn.innerText = opt.t;
                 btn.onclick = () => selectOption(btn, opt.c, question.r);
                 optionsContainer.appendChild(btn);
@@ -174,6 +216,8 @@
             if (isCorrect) {
                 btn.classList.add('correct');
                 score++;
+                scoreCounter.innerText = `Poäng: ${score}`;
+                updateRankUI(score, liveRank, false);
             } else {
                 btn.classList.add('incorrect');
                 buttons.forEach(b => {
@@ -201,27 +245,8 @@
             feedback.classList.add('hidden');
             results.classList.remove('hidden');
             progress.style.width = "100%";
-            document.getElementById('score').innerText = score;
-            
-            // Rank logic
-            rankBadge.classList.remove('rank-elite', 'rank-allstar', 'rank-silver', 'rank-bronze', 'rank-none');
-            
-            if (score === 70) {
-                rankText.innerText = "Elite";
-                rankBadge.classList.add('rank-elite');
-            } else if (score >= 60) {
-                rankText.innerText = "All-star";
-                rankBadge.classList.add('rank-allstar');
-            } else if (score >= 50) {
-                rankText.innerText = "Silver";
-                rankBadge.classList.add('rank-silver');
-            } else if (score >= 40) {
-                rankText.innerText = "Bronze";
-                rankBadge.classList.add('rank-bronze');
-            } else {
-                rankText.innerText = "Trainee";
-                rankBadge.classList.add('rank-none');
-            }
+            finalScoreDisplay.innerText = score;
+            updateRankUI(score, finalRankText, true);
         }
 
         window.onload = loadQuestion;
